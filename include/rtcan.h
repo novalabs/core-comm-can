@@ -279,14 +279,20 @@ typedef struct RTCANDriver {
 /* Driver macros.                                                            */
 /*===========================================================================*/
 
-#ifdef _CHIBIOS_RT_
+#if defined(_CHIBIOS_RT_)
 #define rtcanLock		osalSysLock
 #define rtcanUnlock		osalSysUnlock
 #define rtcanLockFromISR	osalSysLockFromISR
 #define rtcanUnlockFromISR	osalSysUnlockFromISR
 #define rtcanDbgCheck		osalDbgCheck
 #define rtcanDbgAssert		osalDbgAssert
-#else
+#elif defined(_CHIBIOS_NIL_)
+#define rtcanLock		osalSysLock
+#define rtcanUnlock		osalSysUnlock
+#define rtcanLockFromISR	osalSysLockFromISR
+#define rtcanUnlockFromISR	osalSysUnlockFromISR
+#define rtcanDbgCheck		osalDbgCheck
+#define rtcanDbgAssert		osalDbgAssert
 /* TODO: implement DbgCheck and DbgAssert */
 #endif
 
