@@ -1,3 +1,9 @@
+/* COPYRIGHT (c) 2016 Nova Labs SRL
+ *
+ * All rights reserved. All use of this software and documentation is
+ * subject to the License Agreement located in the file LICENSE.
+ */
+ 
 #ifndef _RTCAN_LLD_TIM_H_
 #define _RTCAN_LLD_TIM_H_
 
