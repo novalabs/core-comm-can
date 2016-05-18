@@ -459,8 +459,7 @@ void rtcanStop(RTCANDriver *rtcanp) {
  */
 void rtcanTransmit(RTCANDriver * rtcanp, rtcan_msg_t *msgp, uint32_t timeout) {
 
-	rtcanLock()
-	;
+	rtcanLock();
 	rtcanTransmitI(rtcanp, msgp, timeout);
 	rtcanUnlock();
 }
