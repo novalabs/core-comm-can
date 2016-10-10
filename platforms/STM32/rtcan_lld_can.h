@@ -3,79 +3,105 @@
  * All rights reserved. All use of this software and documentation is
  * subject to the License Agreement located in the file LICENSE.
  */
- 
-#ifndef _RTCAN_LLD_CAN_H_
-#define _RTCAN_LLD_CAN_H_
 
-#ifdef STM32F10X
-#include "stm32f10x.h"
-#endif
+#pragma once
 
-#ifdef STM32F30X
-#include "stm32f30x.h"
-#endif
+#include "msgqueue.h"
 
-#ifdef STM32F40X
-#include "stm32f4xx.h"
-#endif
-
-/*===========================================================================*/
-/* Driver constants.                                                         */
-/*===========================================================================*/
-
-/*
- * The following macros from the ST header file are replaced with better
- * equivalents.
- */
-#undef CAN_BTR_BRP
-#undef CAN_BTR_TS1
-#undef CAN_BTR_TS2
-#undef CAN_BTR_SJW
+#define RTCAN_FRAME_SIZE  8
+#define RTCAN_MBOX_NUM    3
+#define RTCAN_FILTERS_NUM 14
 
 /**
- * @brief   This implementation supports three transmit mailboxes.
+ * @brief   CAN transmit mailbox type.
  */
-#define CAN_TX_MAILBOXES            3
-
-/**
- * @brief   This implementation supports two receive mailboxes.
- */
-#define CAN_RX_MAILBOXES            2
-
-
-
-#define RTCAN_STM32_CAN_MAX_FILTERS 28
-
-#define STM32_CAN_FILTER_MODE_ID_MASK     0     /**< @brief Identifier mask mode. */
-#define STM32_CAN_FILTER_MODE_ID_LIST     1     /**< @brief Identifier list mode. */
-#define STM32_CAN_FILTER_SCALE_16         0     /**< @brief Dual 16-bit scale.    */
-#define STM32_CAN_FILTER_SCALE_32         1     /**< @brief Single 32-bit scale.  */
-#define RTCAN_STM32_CAN_FILTER_SLOTS_PER_BANK ((1 + RTCAN_STM32_CAN_FILTER_MODE) * (2 - RTCAN_STM32_CAN_FILTER_SCALE))
-#define RTCAN_STM32_CAN_FILTER_SLOTS (RTCAN_STM32_CAN_MAX_FILTERS * RTCAN_STM32_CAN_FILTER_SLOTS_PER_BANK)
-
-#define RTCAN_STM32_CAN_FILTER_MODE		STM32_CAN_FILTER_MODE_ID_MASK
-#define RTCAN_STM32_CAN_FILTER_SCALE	STM32_CAN_FILTER_SCALE_32
+typedef uint8_t rtcan_mbox_t;
 
 
 /**
- * @name    CAN registers helper macros
- * @{
+ * @brief   CAN receive filter type.
  */
-#define CAN_BTR_BRP(n)              (n)         /**< @brief BRP field macro.*/
-#define CAN_BTR_TS1(n)              ((n) << 16) /**< @brief TS1 field macro.*/
-#define CAN_BTR_TS2(n)              ((n) << 20) /**< @brief TS2 field macro.*/
-#define CAN_BTR_SJW(n)              ((n) << 24) /**< @brief SJW field macro.*/
+typedef uint8_t rtcan_filter_t;
 
-#define CAN_IDE_STD                 0           /**< @brief Standard id.    */
-#define CAN_IDE_EXT                 1           /**< @brief Extended id.    */
+/**
+ * @brief   RTCAN state machine possible states.
+ */
+typedef enum {
+   RTCAN_UNINIT   = 0,
+   RTCAN_STOP     = 1,
+   RTCAN_STARTING = 2,
+   RTCAN_ERROR    = 3,
+   RTCAN_SYNCING  = 4,
+   RTCAN_SLAVE    = 5,
+   RTCAN_MASTER   = 6,
+} rtcanstate_t;
 
-#define CAN_RTR_DATA                0           /**< @brief Data frame.     */
-#define CAN_RTR_REMOTE              1           /**< @brief Remote frame.   */
-/** @} */
 
-/*===========================================================================*/
-/* Driver pre-compile time settings.                                         */
-/*===========================================================================*/
+/**
+ * @brief   CAN transmit frame type.
+ */
+typedef struct {
+   uint32_t id  : 29;
+   uint8_t  len : 4;
+   uint8_t  mbox;
+   union {
+      uint8_t  data8[8];
+      uint16_t data16[4];
+      uint32_t data32[2];
+   };
+} rtcan_txframe_t;
+
+/**
+ * @brief   CAN receive frame type.
+ */
+typedef struct {
+   uint32_t id  : 29;
+   uint8_t  len : 4;
+   uint8_t  filter;
+   union {
+      uint8_t  data8[8];
+      uint16_t data16[4];
+      uint32_t data32[2];
+   };
+} rtcan_rxframe_t;
+
+/**
+ * @brief   Structure representing a RTCAN driver.
+ */
+typedef struct RTCANDriver {
+   /**
+    * @brief RTCAN state.
+    */
+   rtcanstate_t state;
+   /**
+    * @brief Time-slot counter.
+    */
+   uint32_t slot;
+   /**
+    * @brief Cycle counter.
+    */
+   uint32_t cycle;
+   /**
+    * @brief SRT message queue.
+    */
+   msgqueue_t srt_queue;
+   /**
+    * @brief On-air messages.
+    */
+   rtcan_msg_t* onair[RTCAN_MBOX_NUM];
+   /**
+    * @brief On-air messages.
+    */
+   rtcan_msg_t* filters[RTCAN_FILTERS_NUM];
+   /**
+    * @brief Current configuration data.
+    */
+   const RTCANConfig* config;
+   /**
+    * @brief   driver private data
+    */
+   void* driver_data;
+} RTCANDriver;
 
 /**
  * @name    Low level driver configuration options
@@ -113,21 +139,6 @@
 #endif
 /** @} */
 
-/*===========================================================================*/
-/* Derived constants and error checks.                                       */
-/*===========================================================================*/
-
-/*===========================================================================*/
-/* Driver data structures and types.                                         */
-/*===========================================================================*/
-
-/*===========================================================================*/
-/* Driver macros.                                                            */
-/*===========================================================================*/
-
-/*===========================================================================*/
-/* External declarations.                                                    */
-/*===========================================================================*/
 #if RTCAN_STM32_USE_CAN1 && !defined(__DOXYGEN__)
 extern RTCANDriver RTCAND1;
 #endif
@@ -136,21 +147,88 @@ extern RTCANDriver RTCAND1;
 extern RTCANDriver RTCAND2;
 #endif
 
+void
+rtcan_tim_isr_code(
+   RTCANDriver* rtcanp
+);
+
+void
+rtcan_txok_isr_code(
+   RTCANDriver* rtcanp,
+   rtcan_mbox_t mbox
+);
+
+void
+rtcan_alst_isr_code(
+   RTCANDriver* rtcanp,
+   rtcan_mbox_t mbox
+);
+
+void
+rtcan_terr_isr_code(
+   RTCANDriver* rtcanp,
+   rtcan_mbox_t mbox
+);
+
+void
+rtcan_rx_isr_code(
+   RTCANDriver* rtcanp
+);
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-void rtcan_lld_can_init(void);
-void rtcan_lld_can_start(RTCANDriver *rtcanp);
-void rtcan_lld_can_stop(RTCANDriver *rtcanp);
-bool rtcan_lld_can_txe(RTCANDriver *rtcanp);
-void rtcan_lld_can_transmit(RTCANDriver *rtcanp, rtcan_txframe_t *framep);
-bool rtcan_lld_can_rxne(RTCANDriver *rtcanp);
-void rtcan_lld_can_receive(RTCANDriver *rtcanp, rtcan_rxframe_t *framep);
-bool rtcan_lld_can_addfilter(RTCANDriver* rtcanp, uint32_t id, uint32_t mask, rtcan_filter_t * filter);
+
+void
+rtcan_lld_can_init(
+   void
+);
+
+void
+rtcan_lld_can_start(
+   RTCANDriver* rtcanp
+);
+
+void
+rtcan_lld_can_stop(
+   RTCANDriver* rtcanp
+);
+
+bool
+rtcan_lld_can_txe(
+   RTCANDriver* rtcanp
+);
+
+void
+rtcan_lld_can_transmit(
+   RTCANDriver*     rtcanp,
+   rtcan_txframe_t* framep
+);
+
+bool
+rtcan_lld_can_rxne(
+   RTCANDriver* rtcanp
+);
+
+void
+rtcan_lld_can_receive(
+   RTCANDriver*     rtcanp,
+   rtcan_rxframe_t* framep
+);
+
+bool
+rtcan_lld_can_addfilter(
+   RTCANDriver*    rtcanp,
+   uint32_t        id,
+   uint32_t        mask,
+   rtcan_filter_t* filter
+);
+
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _RTCAN_LLD_CAN_H_ */
 
 /** @} */
