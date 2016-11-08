@@ -25,9 +25,15 @@ rtcanId(
    return(MODULE_ID & 0xFF);
 
 #else
-   const unsigned long* uid = (const unsigned long*)0x1FFFF7E8;
-
-   return(uid[0] & 0xFF);
+    #if defined(STM32F0)
+      const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+      return(uid[0] ^ uid[2]);
+  #elseif defined(STM32F3)
+      const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+      return(uid[0] ^ uid[2]);
+  #else
+    #error No support for this microcontroller
+  #endif
 #endif
 }
 

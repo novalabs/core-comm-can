@@ -90,6 +90,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 uint8_t
 rtcanId(
    void
