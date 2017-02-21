@@ -1,4 +1,4 @@
-/* COPYRIGHT (c) 2016 Nova Labs SRL
+/* COPYRIGHT (c) 2016-2017 Nova Labs SRL
  *
  * All rights reserved. All use of this software and documentation is
  * subject to the License Agreement located in the file LICENSE.
@@ -17,67 +17,71 @@
 
 void
 msgqueue_init(
-   msgqueue_t* queuep
+    msgqueue_t* queuep
 )
 {
-   queuep->next = (rtcan_msg_t*)(void*)queuep;
+    queuep->next = (rtcan_msg_t*)(void*)queuep;
 }
 
 void
 msgqueue_insert(
-   msgqueue_t*  queuep,
-   rtcan_msg_t* msgp
+    msgqueue_t*  queuep,
+    rtcan_msg_t* msgp
 )
 {
-   rtcan_msg_t* curr_msgp = (rtcan_msg_t*)queuep;
+    rtcan_msg_t* curr_msgp = (rtcan_msg_t*)queuep;
 
-   osalDbgCheck((queuep != NULL) && (msgp != NULL));
+    if ((queuep == NULL) || (msgp == NULL)) {
+        return;
+    }
 
-   /* Deadline based list insert. */
-   while (curr_msgp->next != (rtcan_msg_t*)queuep) {
-      if (curr_msgp->deadline > msgp->deadline) {
-         break;
-      }
+    osalDbgCheck((queuep != NULL) && (msgp != NULL));
 
-      curr_msgp = curr_msgp->next;
-   }
+    /* Deadline based list insert. */
+    while (curr_msgp->next != (rtcan_msg_t*)queuep) {
+        if (curr_msgp->deadline > msgp->deadline) {
+            break;
+        }
 
-   msgp->next      = curr_msgp->next;
-   curr_msgp->next = msgp;
+        curr_msgp = curr_msgp->next;
+    }
+
+    msgp->next      = curr_msgp->next;
+    curr_msgp->next = msgp;
 } /* msgqueue_insert */
 
 void
 msgqueue_remove(
-   msgqueue_t*  queuep,
-   rtcan_msg_t* msgp
+    msgqueue_t*  queuep,
+    rtcan_msg_t* msgp
 )
 {
-   rtcan_msg_t* curr_msgp;
+    rtcan_msg_t* curr_msgp;
 
-   osalDbgCheck((queuep != NULL) && (msgp != NULL));
-   osalDbgAssert(!msgqueue_isempty((msgqueue_t*)queuep), "msgqueue_remove(), #1 queue is empty");
+    osalDbgCheck((queuep != NULL) && (msgp != NULL));
+    osalDbgAssert(!msgqueue_isempty((msgqueue_t*)queuep), "msgqueue_remove(), #1 queue is empty");
 
-   curr_msgp = (rtcan_msg_t*)queuep;
+    curr_msgp = (rtcan_msg_t*)queuep;
 
-   while (curr_msgp->next != msgp) {
-      curr_msgp = curr_msgp->next;
-   }
+    while (curr_msgp->next != msgp) {
+        curr_msgp = curr_msgp->next;
+    }
 
-   curr_msgp->next = msgp->next;
+    curr_msgp->next = msgp->next;
 }
 
 rtcan_msg_t*
 msgqueue_get(
-   msgqueue_t* queuep
+    msgqueue_t* queuep
 )
 {
-   rtcan_msg_t* msgp;
+    rtcan_msg_t* msgp;
 
-   osalDbgCheck(queuep != NULL);
-   osalDbgAssert(!msgqueue_isempty((msgqueue_t*)queuep), "msgqueue_get(), #1 queue is empty");
+    osalDbgCheck(queuep != NULL);
+    osalDbgAssert(!msgqueue_isempty((msgqueue_t*)queuep), "msgqueue_get(), #1 queue is empty");
 
-   msgp         = queuep->next;
-   queuep->next = msgp->next;
+    msgp = queuep->next;
+    queuep->next = msgp->next;
 
-   return msgp;
+    return msgp;
 }
