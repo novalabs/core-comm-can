@@ -25,9 +25,9 @@ rtcanId(
    return(MODULE_ID & 0xFF);
 
 #else
-   const unsigned long* uid = (const unsigned long*)0x1FFFF7E8;
+   const unsigned char* uid = (const unsigned char*)0x1FFFF7AC;
 
-   return(uid[0] & 0xFF);
+   return((uid[0] ^ uid[1] ^ uid[3] ^ uid[4]) & 0xFF);
 #endif
 }
 
