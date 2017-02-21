@@ -23,16 +23,16 @@ rtcanId(
 {
 #ifdef MODULE_ID
     return MODULE_ID & 0xFF;
-
 #else
-    #if defined(STM32F0)
+  #if defined(STM32F0)
     const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
     return uid[0] ^ uid[2];
-
-  #elseif defined(STM32F3)
+  #elif defined(STM32F3)
     const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
     return uid[0] ^ uid[2];
-
+  #elif defined(STM32F4)
+    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+    return uid[0] ^ uid[2];
   #else
     #error No support for this microcontroller
   #endif
