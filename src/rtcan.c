@@ -1,4 +1,4 @@
-/* COPYRIGHT (c) 2016 Nova Labs SRL
+/* COPYRIGHT (c) 2016-2017 Nova Labs SRL
  *
  * All rights reserved. All use of this software and documentation is
  * subject to the License Agreement located in the file LICENSE.
@@ -18,29 +18,37 @@
 // TODO: restore old master arbitration protocol
 uint8_t
 rtcanId(
-   void
+    void
 )
 {
 #ifdef MODULE_ID
-   return(MODULE_ID & 0xFF);
-
+    return MODULE_ID & 0xFF;
 #else
-   const unsigned char* uid = (const unsigned char*)0x1FFFF7AC;
-
-   return((uid[0] ^ uid[1] ^ uid[3] ^ uid[4]) & 0xFF);
+  #if defined(STM32F0)
+    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+    return uid[0] ^ uid[2];
+  #elif defined(STM32F3)
+    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+    return uid[0] ^ uid[2];
+  #elif defined(STM32F4)
+    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
+    return uid[0] ^ uid[2];
+  #else
+    #error No support for this microcontroller
+  #endif
 #endif
-}
+} /* rtcanId */
 
 bool
 rtcan_ismaster(
-   void
+    void
 )
 {
 #ifdef RTCAN_ISMASTER
-   return TRUE;
+    return TRUE;
 
 #else
-   return FALSE;
+    return FALSE;
 #endif
 }
 
@@ -51,33 +59,33 @@ rtcan_ismaster(
  */
 void
 rtcan_txok_isr_code(
-   RTCANDriver* rtcanp,
-   rtcan_mbox_t mbox
+    RTCANDriver* rtcanp,
+    rtcan_mbox_t mbox
 )
 {
-   rtcan_msg_t* msgp;
+    rtcan_msg_t* msgp;
 
-   osalSysLockFromISR();
+    osalSysLockFromISR();
 
-   msgp = rtcanp->onair[mbox];
-   rtcanp->onair[mbox] = NULL;
+    msgp = rtcanp->onair[mbox];
+    rtcanp->onair[mbox] = NULL;
 
-   if (msgp->fragment > 0) {
-      msgp->fragment--;
-      msgp->ptr += RTCAN_FRAME_SIZE;
-      msgqueue_insert(&(rtcanp->srt_queue), msgp);
-      msgp->status = RTCAN_MSG_QUEUED;
-   } else {
-      msgp->status = RTCAN_MSG_READY;
+    if (msgp->fragment > 0) {
+        msgp->fragment--;
+        msgp->ptr += RTCAN_FRAME_SIZE;
+        msgqueue_insert(&(rtcanp->srt_queue), msgp);
+        msgp->status = RTCAN_MSG_QUEUED;
+    } else {
+        msgp->status = RTCAN_MSG_READY;
 
-      if (msgp->callback) {
-         msgp->callback(msgp);
-      }
-   }
+        if (msgp->callback) {
+            msgp->callback(msgp);
+        }
+    }
 
-   srt_transmit(rtcanp);
+    srt_transmit(rtcanp);
 
-   osalSysUnlockFromISR();
+    osalSysUnlockFromISR();
 } /* rtcan_txok_isr_code */
 
 /**
@@ -87,31 +95,31 @@ rtcan_txok_isr_code(
  */
 void
 rtcan_alst_isr_code(
-   RTCANDriver* rtcanp,
-   rtcan_mbox_t mbox
+    RTCANDriver* rtcanp,
+    rtcan_mbox_t mbox
 )
 {
-   rtcan_msg_t* msgp;
+    rtcan_msg_t* msgp;
 
-   osalSysLockFromISR();
+    osalSysLockFromISR();
 
-   msgp = rtcanp->onair[mbox];
-   rtcanp->onair[mbox] = NULL;
+    msgp = rtcanp->onair[mbox];
+    rtcanp->onair[mbox] = NULL;
 
-   if (msgp == NULL) {
-      /* should never happen */
-      while (1) {}
+    if (msgp == NULL) {
+        /* should never happen */
+        while (1) {}
 
-      osalSysUnlockFromISR();
-      return;
-   }
+        osalSysUnlockFromISR();
+        return;
+    }
 
-   msgqueue_insert(&(rtcanp->srt_queue), msgp);
-   msgp->status = RTCAN_MSG_QUEUED;
+    msgqueue_insert(&(rtcanp->srt_queue), msgp);
+    msgp->status = RTCAN_MSG_QUEUED;
 
-   srt_transmit(rtcanp);
+    srt_transmit(rtcanp);
 
-   osalSysUnlockFromISR();
+    osalSysUnlockFromISR();
 } /* rtcan_alst_isr_code */
 
 /**
@@ -121,34 +129,34 @@ rtcan_alst_isr_code(
  */
 void
 rtcan_terr_isr_code(
-   RTCANDriver* rtcanp,
-   rtcan_mbox_t mbox
+    RTCANDriver* rtcanp,
+    rtcan_mbox_t mbox
 )
 {
-   rtcan_msg_t* msgp;
+    rtcan_msg_t* msgp;
 
-   osalSysLockFromISR();
+    osalSysLockFromISR();
 
-   msgp = rtcanp->onair[mbox];
-   rtcanp->onair[mbox] = NULL;
+    msgp = rtcanp->onair[mbox];
+    rtcanp->onair[mbox] = NULL;
 
-   if (msgp == NULL) {
-      /* should never happen */
-      //   while (1) {} // DAVIDE
+    if (msgp == NULL) {
+        /* should never happen */
+        //   while (1) {} // DAVIDE
 
-      osalSysUnlockFromISR();
-      return;
-   }
+        osalSysUnlockFromISR();
+        return;
+    }
 
-   msgp->status = RTCAN_MSG_TIMEOUT;
+    msgp->status = RTCAN_MSG_TIMEOUT;
 
-   if (msgp->callback) {
-      msgp->callback(msgp);
-   }
+    if (msgp->callback) {
+        msgp->callback(msgp);
+    }
 
-   srt_transmit(rtcanp);
+    srt_transmit(rtcanp);
 
-   osalSysUnlockFromISR();
+    osalSysUnlockFromISR();
 } /* rtcan_terr_isr_code */
 
 /**
@@ -158,81 +166,81 @@ rtcan_terr_isr_code(
  */
 void
 rtcan_rx_isr_code(
-   RTCANDriver* rtcanp
+    RTCANDriver* rtcanp
 )
 {
-   rtcan_rxframe_t rxf;
-   rtcan_msg_t*    msgp;
+    rtcan_rxframe_t rxf;
+    rtcan_msg_t*    msgp;
 
-   osalSysLockFromISR();
+    osalSysLockFromISR();
 
-   rtcan_lld_can_receive(rtcanp, &rxf);
+    rtcan_lld_can_receive(rtcanp, &rxf);
 
-   msgp = rtcanp->filters[rxf.filter];
+    msgp = rtcanp->filters[rxf.filter];
 
-   /* Should never happen. */
-   if (msgp == NULL) {
-      osalSysUnlockFromISR();
+    /* Should never happen. */
+    if (msgp == NULL) {
+        osalSysUnlockFromISR();
 
-      while (1) {}
+        while (1) {}
 
-      return;
-   }
+        return;
+    }
 
-   if (msgp->status == RTCAN_MSG_READY) {
-      msgp->status = RTCAN_MSG_ONAIR;
-      msgp->ptr    = (uint8_t*)msgp->data;
-      msgp->id     = (rxf.id >> 7) & 0xFFFF;
+    if (msgp->status == RTCAN_MSG_READY) {
+        msgp->status = RTCAN_MSG_ONAIR;
+        msgp->ptr    = (uint8_t*)msgp->data;
+        msgp->id     = (rxf.id >> 7) & 0xFFFF;
 
-      /* Reset fragment counter. */
-      if (msgp->size > RTCAN_FRAME_SIZE) {
-         msgp->fragment = (msgp->size - 1) / RTCAN_FRAME_SIZE;
-      } else {
-         msgp->fragment = 0;
-      }
-   }
+        /* Reset fragment counter. */
+        if (msgp->size > RTCAN_FRAME_SIZE) {
+            msgp->fragment = (msgp->size - 1) / RTCAN_FRAME_SIZE;
+        } else {
+            msgp->fragment = 0;
+        }
+    }
 
-   if (msgp->status == RTCAN_MSG_ONAIR) {
-      uint32_t i;
+    if (msgp->status == RTCAN_MSG_ONAIR) {
+        uint32_t i;
 
-      /* check source (needed by mw v2). */
-      uint8_t source     = (rxf.id >> 7) & 0xFF;
-      uint8_t prevsource = msgp->id & 0xFF;
+        /* check source (needed by mw v2). */
+        uint8_t source     = (rxf.id >> 7) & 0xFF;
+        uint8_t prevsource = msgp->id & 0xFF;
 
-      if (source != prevsource) {
+        if (source != prevsource) {
 //		if (msgp->id != ((rxf.id >> 7) & 0xFFFF)) {
-         osalSysUnlockFromISR();
-         return;
-      }
+            osalSysUnlockFromISR();
+            return;
+        }
 
-      /* check fragment */
-      uint8_t fragment = rxf.id & 0x7F;
+        /* check fragment */
+        uint8_t fragment = rxf.id & 0x7F;
 
-      if (fragment != msgp->fragment) {
-         msgp->status = RTCAN_MSG_READY;
-         osalSysUnlockFromISR();
-         return;
-      }
+        if (fragment != msgp->fragment) {
+            msgp->status = RTCAN_MSG_READY;
+            osalSysUnlockFromISR();
+            return;
+        }
 
-      for (i = 0; i < rxf.len; i++) {
-         *(msgp->ptr++) = rxf.data8[i];
-      }
+        for (i = 0; i < rxf.len; i++) {
+            *(msgp->ptr++) = rxf.data8[i];
+        }
 
-      if (msgp->fragment > 0) {
-         msgp->fragment--;
-      } else {
-         if (msgp->callback) {
-            msgp->status = RTCAN_MSG_BUSY;
-            msgp->callback(msgp);
-         }
-      }
-   }
+        if (msgp->fragment > 0) {
+            msgp->fragment--;
+        } else {
+            if (msgp->callback) {
+                msgp->status = RTCAN_MSG_BUSY;
+                msgp->callback(msgp);
+            }
+        }
+    }
 
-   if (msgp->status == RTCAN_MSG_ERROR) {
-      msgp->callback(msgp);
-   }
+    if (msgp->status == RTCAN_MSG_ERROR) {
+        msgp->callback(msgp);
+    }
 
-   osalSysUnlockFromISR();
+    osalSysUnlockFromISR();
 } /* rtcan_rx_isr_code */
 
 /**
@@ -242,10 +250,10 @@ rtcan_rx_isr_code(
  */
 void
 rtcanInit(
-   void
+    void
 )
 {
-   rtcan_lld_can_init();
+    rtcan_lld_can_init();
 }
 
 /**
@@ -257,23 +265,23 @@ rtcanInit(
  */
 void
 rtcanReset(
-   RTCANDriver* rtcanp
+    RTCANDriver* rtcanp
 )
 {
-   int i;
+    int i;
 
-   rtcanp->state  = RTCAN_STOP;
-   rtcanp->config = NULL;
+    rtcanp->state  = RTCAN_STOP;
+    rtcanp->config = NULL;
 
-   msgqueue_init(&(rtcanp->srt_queue));
+    msgqueue_init(&(rtcanp->srt_queue));
 
-   for (i = 0; i < RTCAN_MBOX_NUM; i++) {
-      rtcanp->onair[i] = NULL;
-   }
+    for (i = 0; i < RTCAN_MBOX_NUM; i++) {
+        rtcanp->onair[i] = NULL;
+    }
 
-   for (i = 0; i < RTCAN_FILTERS_NUM; i++) {
-      rtcanp->filters[i] = NULL;
-   }
+    for (i = 0; i < RTCAN_FILTERS_NUM; i++) {
+        rtcanp->filters[i] = NULL;
+    }
 }
 
 /**
@@ -290,30 +298,30 @@ rtcanReset(
  */
 void
 rtcanStart(
-   RTCANDriver*       rtcanp,
-   const RTCANConfig* config
+    RTCANDriver*       rtcanp,
+    const RTCANConfig* config
 )
 {
-   osalDbgCheck((rtcanp != NULL) || (config != NULL));
+    osalDbgCheck((rtcanp != NULL) || (config != NULL));
 
-   osalSysLock();
+    osalSysLock();
 
-   osalDbgAssert((rtcanp->state == RTCAN_STOP),
-                 "rtcanStart(), #1 invalid state");
+    osalDbgAssert((rtcanp->state == RTCAN_STOP),
+                  "rtcanStart(), #1 invalid state");
 
-   if (rtcanp->state == RTCAN_STOP) {
-      rtcanp->config = config;
-      rtcan_lld_can_start(rtcanp);
-      rtcanp->state = RTCAN_STARTING;
-   }
+    if (rtcanp->state == RTCAN_STOP) {
+        rtcanp->config = config;
+        rtcan_lld_can_start(rtcanp);
+        rtcanp->state = RTCAN_STARTING;
+    }
 
-   rtcanp->state = RTCAN_SLAVE;
+    rtcanp->state = RTCAN_SLAVE;
 
-   osalSysUnlock();
+    osalSysUnlock();
 
-   while (rtcanp->state == RTCAN_SYNCING) {
-      chThdSleepMilliseconds(100);
-   }
+    while (rtcanp->state == RTCAN_SYNCING) {
+        chThdSleepMilliseconds(100);
+    }
 } /* rtcanStart */
 
 /**
@@ -325,19 +333,19 @@ rtcanStart(
  */
 void
 rtcanStop(
-   RTCANDriver* rtcanp
+    RTCANDriver* rtcanp
 )
 {
-   osalDbgCheck(rtcanp != NULL);
+    osalDbgCheck(rtcanp != NULL);
 
-   osalSysLock();
+    osalSysLock();
 
-   osalDbgAssert((rtcanp->state == RTCAN_MASTER) || (rtcanp->state == RTCAN_SLAVE),
-                 "rtcanStop(), #1 invalid state");
-   rtcan_lld_can_stop(rtcanp);
-   rtcanp->state = RTCAN_STOP;
+    osalDbgAssert((rtcanp->state == RTCAN_MASTER) || (rtcanp->state == RTCAN_SLAVE),
+                  "rtcanStop(), #1 invalid state");
+    rtcan_lld_can_stop(rtcanp);
+    rtcanp->state = RTCAN_STOP;
 
-   osalSysUnlock();
+    osalSysUnlock();
 }
 
 /**
@@ -347,14 +355,14 @@ rtcanStop(
  */
 void
 rtcanTransmit(
-   RTCANDriver* rtcanp,
-   rtcan_msg_t* msgp,
-   uint32_t     timeout
+    RTCANDriver* rtcanp,
+    rtcan_msg_t* msgp,
+    uint32_t     timeout
 )
 {
-   osalSysLock();
-   rtcanTransmitI(rtcanp, msgp, timeout);
-   osalSysUnlock();
+    osalSysLock();
+    rtcanTransmitI(rtcanp, msgp, timeout);
+    osalSysUnlock();
 }
 
 /**
@@ -364,31 +372,31 @@ rtcanTransmit(
  */
 void
 rtcanTransmitI(
-   RTCANDriver* rtcanp,
-   rtcan_msg_t* msgp,
-   uint32_t     timeout
+    RTCANDriver* rtcanp,
+    rtcan_msg_t* msgp,
+    uint32_t     timeout
 )
 {
-   /* Lock message */
-   msgp->status = RTCAN_MSG_BUSY;
+    /* Lock message */
+    msgp->status = RTCAN_MSG_BUSY;
 
-   /* Compute absolute deadline */
-   msgp->deadline = chVTGetSystemTimeX() + timeout;
+    /* Compute absolute deadline */
+    msgp->deadline = chVTGetSystemTimeX() + timeout;
 
-   /* Reset fragment counter. */
-   if (msgp->size > RTCAN_FRAME_SIZE) {
-      msgp->fragment = (msgp->size - 1) / RTCAN_FRAME_SIZE;
-   } else {
-      msgp->fragment = 0;
-   }
+    /* Reset fragment counter. */
+    if (msgp->size > RTCAN_FRAME_SIZE) {
+        msgp->fragment = (msgp->size - 1) / RTCAN_FRAME_SIZE;
+    } else {
+        msgp->fragment = 0;
+    }
 
-   /* Reset data pointer. */
-   msgp->ptr = (uint8_t*)msgp->data;
+    /* Reset data pointer. */
+    msgp->ptr = (uint8_t*)msgp->data;
 
-   msgqueue_insert(&(rtcanp->srt_queue), msgp);
-   msgp->status = RTCAN_MSG_QUEUED;
+    msgqueue_insert(&(rtcanp->srt_queue), msgp);
+    msgp->status = RTCAN_MSG_QUEUED;
 
-   srt_transmit(rtcanp);
+    srt_transmit(rtcanp);
 } /* rtcanTransmitI */
 
 /**
@@ -398,35 +406,35 @@ rtcanTransmitI(
  */
 void
 rtcanReceive(
-   RTCANDriver* rtcanp,
-   rtcan_msg_t* msgp
+    RTCANDriver* rtcanp,
+    rtcan_msg_t* msgp
 )
 {
-   rtcan_filter_t filter;
+    rtcan_filter_t filter;
 
-   osalSysLock();
+    osalSysLock();
 
-   /* Add the hardware filter. */
-   rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, 0xFFFF << 7, &filter);
-   rtcanp->filters[filter] = msgp;
+    /* Add the hardware filter. */
+    rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, 0xFFFF << 7, &filter);
+    rtcanp->filters[filter] = msgp;
 
-   osalSysUnlock();
+    osalSysUnlock();
 }
 
 void
 rtcanReceiveMask(
-   RTCANDriver* rtcanp,
-   rtcan_msg_t* msgp,
-   uint32_t     mask
+    RTCANDriver* rtcanp,
+    rtcan_msg_t* msgp,
+    uint32_t     mask
 )
 {
-   rtcan_filter_t filter;
+    rtcan_filter_t filter;
 
-   osalSysLock();
+    osalSysLock();
 
-   /* Add the hardware filter. */
-   rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, (mask & 0xFFFF) << 7, &filter);
-   rtcanp->filters[filter] = msgp;
+    /* Add the hardware filter. */
+    rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, (mask & 0xFFFF) << 7, &filter);
+    rtcanp->filters[filter] = msgp;
 
-   osalSysUnlock();
+    osalSysUnlock();
 }

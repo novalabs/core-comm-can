@@ -1,4 +1,4 @@
-/* COPYRIGHT (c) 2016 Nova Labs SRL
+/* COPYRIGHT (c) 2016-2017 Nova Labs SRL
  *
  * All rights reserved. All use of this software and documentation is
  * subject to the License Agreement located in the file LICENSE.
@@ -17,15 +17,15 @@
 #include "rtcan.h"
 
 typedef struct {
-   rtcan_msg_t* next;
+    rtcan_msg_t* next;
 } msgqueue_t;
 
-inline bool
+static inline bool
 msgqueue_isempty(
-   msgqueue_t* queue_p
+    msgqueue_t* queue_p
 )
 {
-   return((void*)(queue_p) == (void*)(queue_p)->next);
+    return (void*)(queue_p) == (void*)(queue_p)->next;
 }
 
 #ifdef __cplusplus
@@ -33,24 +33,24 @@ extern "C" {
 #endif
 void
 msgqueue_init(
-   msgqueue_t* queuep
+    msgqueue_t* queuep
 );
 
 void
 msgqueue_insert(
-   msgqueue_t*  queuep,
-   rtcan_msg_t* msgp
+    msgqueue_t*  queuep,
+    rtcan_msg_t* msgp
 );
 
 void
 msgqueue_remove(
-   msgqueue_t*  queuep,
-   rtcan_msg_t* msgp
+    msgqueue_t*  queuep,
+    rtcan_msg_t* msgp
 );
 
 rtcan_msg_t*
 msgqueue_get(
-   msgqueue_t* queue_p
+    msgqueue_t* queue_p
 );
 
 
