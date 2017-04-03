@@ -91,11 +91,6 @@ typedef struct {
 extern "C" {
 #endif
 
-uint8_t
-rtcanId(
-    void
-);
-
 void
 rtcanInit(
     void
