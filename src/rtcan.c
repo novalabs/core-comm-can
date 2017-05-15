@@ -15,43 +15,6 @@
 #include "msgqueue.h"
 #include "srt.h"
 
-// TODO: restore old master arbitration protocol
-uint8_t
-rtcanId(
-    void
-)
-{
-#ifdef MODULE_ID
-    return MODULE_ID & 0xFF;
-#else
-  #if defined(STM32F0)
-    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
-    return uid[0] ^ uid[2];
-  #elif defined(STM32F3)
-    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
-    return uid[0] ^ uid[2];
-  #elif defined(STM32F4)
-    const unsigned char* uid = (const unsigned char*)0x1FFFF7A8;
-    return uid[0] ^ uid[2];
-  #else
-    #error No support for this microcontroller
-  #endif
-#endif
-} /* rtcanId */
-
-bool
-rtcan_ismaster(
-    void
-)
-{
-#ifdef RTCAN_ISMASTER
-    return TRUE;
-
-#else
-    return FALSE;
-#endif
-}
-
 /**
  * @brief   Transmission completed interrupt platform-independent code.
  *
