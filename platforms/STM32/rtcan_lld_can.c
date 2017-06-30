@@ -442,6 +442,7 @@ rtcan_lld_can_start(
     /* TODO: to calculate from bitrate configuration */
 #ifdef STM32F0XX
     can->BTR = 0x03490002; //48MHz @ 66% from http://www.bittiming.can-wiki.info/
+    //can->BTR = 0x03490000;
 #endif
 
 #ifdef STM32F3XX
