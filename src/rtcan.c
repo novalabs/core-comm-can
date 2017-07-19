@@ -200,21 +200,23 @@ rtcan_rx_isr_code(
 
     osalSysLockFromISR();
 
-    rtcan_lld_can_receive(rtcanp, &rxf);
+    while(rtcan_lld_can_rxne(rtcanp)) {
+        rtcan_lld_can_receive(rtcanp, &rxf);
 
-    msgp = rtcanp->filters[rxf.filter];
+        msgp = rtcanp->filters[rxf.filter];
 
-    /* Should never happen. */
-    if (msgp == NULL) {
-        osalSysUnlockFromISR();
+        /* Should never happen. */
+        if (msgp == NULL) {
+            osalSysUnlockFromISR();
 
-        while (1) {}
+            while (1) {}
 
-        return;
+            return;
+        }
+
+        // We trust rx_isr
+        ((rtcan_rx_isr_t)msgp->rx_isr)(&rxf, msgp);
     }
-
-    // We trust rx_isr
-    ((rtcan_rx_isr_t)msgp->rx_isr)(&rxf, msgp);
 
     osalSysUnlockFromISR();
 }  /* rtcan_rx_isr_code */
