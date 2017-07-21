@@ -14,6 +14,20 @@ typedef struct RTCANDriver RTCANDriver;
 extern RTCANDriver RTCAND1;
 
 /**
+ * @brief   CAN receive frame type.
+ */
+typedef struct {
+    uint32_t id  : 29;
+    uint8_t  len : 4;
+    uint8_t  filter;
+    union {
+        uint8_t  data8[8];
+        uint16_t data16[4];
+        uint32_t data32[2];
+    };
+} rtcan_rxframe_t;
+
+/**
  * @name    Configuration options
  * @{
  */
@@ -66,6 +80,7 @@ typedef struct __attribute__((aligned(4), packed)) rtcan_msg_t {
     const uint8_t* data;
     uint8_t*       ptr;
     uint8_t        fragment : 7;
+    void*          rx_isr; // RX interrupt code - if NULL then default
 }
 rtcan_msg_t;
 

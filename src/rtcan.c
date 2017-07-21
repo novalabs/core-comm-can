@@ -15,6 +15,11 @@
 #include "msgqueue.h"
 #include "srt.h"
 
+typedef void (* rtcan_rx_isr_t)(
+    rtcan_rxframe_t* rxf,
+    rtcan_msg_t*     msgp
+);
+
 /**
  * @brief   Transmission completed interrupt platform-independent code.
  *
@@ -122,38 +127,16 @@ rtcan_terr_isr_code(
     osalSysUnlockFromISR();
 } /* rtcan_terr_isr_code */
 
-/**
- * @brief   Receive interrupt platform-independent code.
- *
- * @api
- */
 void
-rtcan_rx_isr_code(
-    RTCANDriver* rtcanp
+rtcan_rx_isr_default(
+    rtcan_rxframe_t* rxf,
+    rtcan_msg_t*     msgp
 )
 {
-    rtcan_rxframe_t rxf;
-    rtcan_msg_t*    msgp;
-
-    osalSysLockFromISR();
-
-    rtcan_lld_can_receive(rtcanp, &rxf);
-
-    msgp = rtcanp->filters[rxf.filter];
-
-    /* Should never happen. */
-    if (msgp == NULL) {
-        osalSysUnlockFromISR();
-
-        while (1) {}
-
-        return;
-    }
-
     if (msgp->status == RTCAN_MSG_READY) {
         msgp->status = RTCAN_MSG_ONAIR;
         msgp->ptr    = (uint8_t*)msgp->data;
-        msgp->id     = (rxf.id >> 7) & 0xFFFF;
+        msgp->id     = (rxf->id >> 7) & 0xFFFF;
 
         /* Reset fragment counter. */
         if (msgp->size > RTCAN_FRAME_SIZE) {
@@ -167,26 +150,24 @@ rtcan_rx_isr_code(
         uint32_t i;
 
         /* check source (needed by mw v2). */
-        uint8_t source     = (rxf.id >> 7) & 0xFF;
+        uint8_t source     = (rxf->id >> 7) & 0xFF;
         uint8_t prevsource = msgp->id & 0xFF;
 
         if (source != prevsource) {
-//		if (msgp->id != ((rxf.id >> 7) & 0xFFFF)) {
-            osalSysUnlockFromISR();
+//      if (msgp->id != ((rxf.id >> 7) & 0xFFFF)) {
             return;
         }
 
         /* check fragment */
-        uint8_t fragment = rxf.id & 0x7F;
+        uint8_t fragment = rxf->id & 0x7F;
 
         if (fragment != msgp->fragment) {
             msgp->status = RTCAN_MSG_READY;
-            osalSysUnlockFromISR();
             return;
         }
 
-        for (i = 0; i < rxf.len; i++) {
-            *(msgp->ptr++) = rxf.data8[i];
+        for (i = 0; i < rxf->len; i++) {
+            *(msgp->ptr++) = rxf->data8[i];
         }
 
         if (msgp->fragment > 0) {
@@ -202,9 +183,43 @@ rtcan_rx_isr_code(
     if (msgp->status == RTCAN_MSG_ERROR) {
         msgp->callback(msgp);
     }
+} /* rtcan_rx_isr_default */
+
+/**
+ * @brief   Receive interrupt platform-independent code.
+ *
+ * @api
+ */
+void
+rtcan_rx_isr_code(
+    RTCANDriver* rtcanp
+)
+{
+    rtcan_rxframe_t rxf;
+    rtcan_msg_t*    msgp;
+
+    osalSysLockFromISR();
+
+    while(rtcan_lld_can_rxne(rtcanp)) {
+        rtcan_lld_can_receive(rtcanp, &rxf);
+
+        msgp = rtcanp->filters[rxf.filter];
+
+        /* Should never happen. */
+        if (msgp == NULL) {
+            osalSysUnlockFromISR();
+
+            while (1) {}
+
+            return;
+        }
+
+        // We trust rx_isr
+        ((rtcan_rx_isr_t)msgp->rx_isr)(&rxf, msgp);
+    }
 
     osalSysUnlockFromISR();
-} /* rtcan_rx_isr_code */
+}  /* rtcan_rx_isr_code */
 
 /**
  * @brief   RTCAN Driver initialization.
@@ -381,6 +396,10 @@ rtcanReceive(
     rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, 0xFFFF << 7, &filter);
     rtcanp->filters[filter] = msgp;
 
+    if (msgp->rx_isr == NULL) {
+        msgp->rx_isr = (void*)rtcan_rx_isr_default;
+    }
+
     osalSysUnlock();
 }
 
@@ -398,6 +417,10 @@ rtcanReceiveMask(
     /* Add the hardware filter. */
     rtcan_lld_can_addfilter(rtcanp, (msgp->id & 0xFFFF) << 7, (mask & 0xFFFF) << 7, &filter);
     rtcanp->filters[filter] = msgp;
+
+    if (msgp->rx_isr == NULL) {
+        msgp->rx_isr = (void*)rtcan_rx_isr_default;
+    }
 
     osalSysUnlock();
 }

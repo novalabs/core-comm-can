@@ -51,6 +51,8 @@ typedef struct {
     };
 } rtcan_txframe_t;
 
+#if 0
+
 /**
  * @brief   CAN receive frame type.
  */
@@ -64,6 +66,8 @@ typedef struct {
         uint32_t data32[2];
     };
 } rtcan_rxframe_t;
+
+#endif
 
 /**
  * @brief   Structure representing a RTCAN driver.
