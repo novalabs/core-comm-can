@@ -39,8 +39,10 @@ msgqueue_insert(
 
     /* Deadline based list insert. */
     while (curr_msgp->next != (rtcan_msg_t*)queuep) {
-        if (curr_msgp->deadline > msgp->deadline) {
-            break;
+        if (curr_msgp->status == RTCAN_MSG_QUEUED) {
+            if (curr_msgp->deadline > msgp->deadline) {
+                break;
+            }
         }
 
         curr_msgp = curr_msgp->next;
