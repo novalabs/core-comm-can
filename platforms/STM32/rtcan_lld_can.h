@@ -199,6 +199,11 @@ rtcan_lld_can_stop(
     RTCANDriver* rtcanp
 );
 
+void
+rtcan_lld_can_force_stop(
+    RTCANDriver* rtcanp
+);
+
 bool
 rtcan_lld_can_txe(
     RTCANDriver* rtcanp

@@ -493,9 +493,54 @@ rtcan_lld_can_stop(
             nvicDisableVector(STM32_CAN1_RX1_NUMBER);
             nvicDisableVector(STM32_CAN1_SCE_NUMBER);
       #endif
+            rccDisableCAN1(FALSE);
+        }
+#endif /* if RTCAN_STM32_USE_CAN1 */
+#if RTCAN_STM32_USE_CAN2
+        if (&RTCAND2 == rtcanp) {
+            CAN2->MCR = 0x00010002; /* Register reset value.    */
+            CAN2->IER = 0x00000000; /* All sources disabled.    */
+            nvicDisableVector(STM32_CAN2_TX_NUMBER);
+            nvicDisableVector(STM32_CAN2_RX0_NUMBER);
+            nvicDisableVector(STM32_CAN2_RX1_NUMBER);
+            nvicDisableVector(STM32_CAN2_SCE_NUMBER);
+            rccDisableCAN2(FALSE);
+        }
+#endif
+    }
+} /* rtcan_lld_can_stop */
 
-            CAN1->MCR = 0x00008000;
-            osalThreadSleepMilliseconds(10);
+/**
+ * @brief   Deactivates the CAN peripheral.
+ *
+ * @param[in] rtcanp      pointer to the @p RTCANDriver object
+ *
+ * @notapi
+ */
+void
+rtcan_lld_can_force_stop(
+    RTCANDriver* rtcanp
+)
+{
+    /* Stop it. */
+    if (true) {
+#if RTCAN_STM32_USE_CAN1
+        if (&RTCAND1 == rtcanp) {
+#if RTCAN_STM32_USE_CAN2
+            osalDbgAssert(RTCAND2.state == CAN_STOP,
+                          "rtcan_lld_can_stop(), #1 RTCAN2 must be stopped");
+#endif
+
+            CAN1->MCR = 0x00010002; /* Register reset value.    */
+            CAN1->IER = 0x00000000; /* All sources disabled.    */
+      #if defined(STM32_CAN1_UNIFIED_NUMBER)
+            nvicDisableVector(STM32_CAN1_UNIFIED_NUMBER);
+      #else
+            nvicDisableVector(STM32_CAN1_TX_NUMBER);
+            nvicDisableVector(STM32_CAN1_RX0_NUMBER);
+            nvicDisableVector(STM32_CAN1_RX1_NUMBER);
+            nvicDisableVector(STM32_CAN1_SCE_NUMBER);
+      #endif
             rccDisableCAN1(FALSE);
         }
 #endif /* if RTCAN_STM32_USE_CAN1 */
