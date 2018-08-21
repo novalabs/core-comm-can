@@ -460,6 +460,12 @@ rtcan_lld_can_start(
     can->IER = CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1
                | CAN_IER_WKUIE | CAN_IER_ERRIE | CAN_IER_LECIE | CAN_IER_BOFIE
                | CAN_IER_EPVIE | CAN_IER_EWGIE | CAN_IER_FOVIE0 | CAN_IER_FOVIE1;
+
+#ifdef STM32F4XX
+    /* Use all 28 filters for CAN1 */
+    can->FMR &= ~CAN_FMR_CAN2SB;
+    can->FMR |= 28 << 8;
+#endif
 } /* rtcan_lld_can_start */
 
 /**
