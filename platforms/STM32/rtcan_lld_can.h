@@ -7,10 +7,16 @@
 #pragma once
 
 #include "msgqueue.h"
+#include "hal.h"
 
 #define RTCAN_FRAME_SIZE  8
 #define RTCAN_MBOX_NUM    3
+
+#ifdef STM32F4XX
+#define RTCAN_FILTERS_NUM 28
+#else
 #define RTCAN_FILTERS_NUM 14
+#endif
 
 /**
  * @brief   CAN transmit mailbox type.
